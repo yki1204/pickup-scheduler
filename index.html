@@ -80,7 +80,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .day-column {
   border-right: 1px solid var(--border);
   min-height: 120px;
-  min-width: 90px;
+  min-width: 120px;
 }
 .day-column:last-child { border-right: none; }
 
@@ -159,7 +159,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 }
 .block-from {
   font-weight: 700; font-size: 13px; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: break-word;
 }
 .block-time {
   color: var(--accent); font-weight: 700; font-size: 12px; white-space: nowrap;
@@ -170,7 +170,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .block-arrow { color: var(--text-light); font-size: 10px; flex-shrink: 0; }
 .block-to {
   color: var(--primary); font-weight: 700; font-size: 13px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .block-profiles {
@@ -855,7 +855,7 @@ function renderGrid() {
   container.innerHTML = '';
 
   const visibleDays = getVisibleDays();
-  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, minmax(90px, 1fr))`;
+  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, minmax(120px, 1fr))`;
 
   const sorted = [...schedules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
