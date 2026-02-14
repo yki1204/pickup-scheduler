@@ -25,7 +25,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100vh; height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
@@ -40,8 +43,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 100;
   box-shadow: 0 2px 12px rgba(124,158,178,0.3);
 }
@@ -61,7 +63,12 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .header-export-btn.visible { display: flex; }
 
 /* Column Layout */
-.schedule-container { padding: 8px 4px; }
+.schedule-container {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 4px;
+}
 
 .schedule-columns {
   display: grid;
@@ -73,6 +80,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .day-column {
   border-right: 1px solid var(--border);
   min-height: 120px;
+  min-width: 90px;
 }
 .day-column:last-child { border-right: none; }
 
@@ -85,7 +93,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
   border-bottom: 2px solid var(--border);
   background: var(--bg);
   position: sticky;
-  top: 54px;
+  top: 0;
   z-index: 10;
 }
 
@@ -390,7 +398,6 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .time-colon { font-size: 16px; font-weight: 600; color: var(--text-light); }
 
 @media (max-width: 480px) {
-  .schedule-container { padding: 4px 2px; }
   .schedule-block { padding: 8px 6px; }
 }
 </style>
@@ -848,7 +855,7 @@ function renderGrid() {
   container.innerHTML = '';
 
   const visibleDays = getVisibleDays();
-  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, minmax(90px, 1fr))`;
 
   const sorted = [...schedules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -1094,6 +1101,7 @@ function exportScheduleImage() {
   const container = document.getElementById('scheduleColumns');
   const btn = document.getElementById('exportBtn');
   btn.style.pointerEvents = 'none';
+  showToast('이미지 생성 중...');
 
   // Hide delete buttons and add-block buttons for clean export
   const delBtns = container.querySelectorAll('.block-delete');
@@ -1101,18 +1109,22 @@ function exportScheduleImage() {
   delBtns.forEach(b => b.style.display = 'none');
   addBtns.forEach(b => b.style.display = 'none');
 
-  // Create a wrapper for export with title and padding
+  // Determine export width: at least 600px for readability
+  const visibleDays = getVisibleDays();
+  const exportWidth = Math.max(600, visibleDays.length * 120);
+
+  // Create a wrapper for export
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'background:#f8f6f1;padding:24px 16px 20px;display:inline-block;min-width:' + container.offsetWidth + 'px;';
+  wrapper.style.cssText = `position:absolute;left:-9999px;top:0;background:#f8f6f1;padding:28px 20px 24px;width:${exportWidth}px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;`;
 
   const title = document.createElement('div');
-  title.style.cssText = 'text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:20px;font-weight:700;color:#4a4a4a;margin-bottom:16px;';
+  title.style.cssText = 'text-align:center;font-size:22px;font-weight:700;color:#4a4a4a;margin-bottom:18px;letter-spacing:-0.3px;';
   title.textContent = '하원 픽업 스케줄러';
 
   const clone = container.cloneNode(true);
-  clone.style.cssText = container.style.cssText + ';background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);';
+  clone.style.cssText = `display:grid;grid-template-columns:repeat(${visibleDays.length}, 1fr);gap:0;background:white;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,0.08);overflow:hidden;`;
 
-  // Fix sticky headers causing first block to be pushed down in clone
+  // Fix sticky headers in clone
   clone.querySelectorAll('.day-header').forEach(h => {
     h.style.position = 'static';
   });
@@ -1125,7 +1137,9 @@ function exportScheduleImage() {
     scale: 2,
     backgroundColor: '#f8f6f1',
     useCORS: true,
-    logging: false
+    logging: false,
+    width: exportWidth,
+    windowWidth: exportWidth
   }).then(canvas => {
     document.body.removeChild(wrapper);
     delBtns.forEach(b => b.style.display = '');
