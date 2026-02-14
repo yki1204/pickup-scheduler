@@ -25,7 +25,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
@@ -40,8 +43,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 100;
   box-shadow: 0 2px 12px rgba(124,158,178,0.3);
 }
@@ -61,7 +63,11 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .header-export-btn.visible { display: flex; }
 
 /* Column Layout */
-.schedule-container { padding: 8px 4px; }
+.schedule-container {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .schedule-columns {
   display: grid;
@@ -73,6 +79,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .day-column {
   border-right: 1px solid var(--border);
   min-height: 120px;
+  min-width: 90px;
 }
 .day-column:last-child { border-right: none; }
 
@@ -85,7 +92,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
   border-bottom: 2px solid var(--border);
   background: var(--bg);
   position: sticky;
-  top: 54px;
+  top: 0;
   z-index: 10;
 }
 
@@ -116,7 +123,7 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .schedule-block {
   background: var(--card);
   border-radius: 10px;
-  padding: 10px 8px;
+  padding: 8px 6px 8px 10px;
   box-shadow: var(--shadow);
   cursor: grab;
   transition: transform 0.15s, box-shadow 0.15s;
@@ -142,26 +149,25 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
   transform: scale(0.95);
 }
 
-.block-route {
+.block-content {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 1px;
-}
-.block-route-top {
-  display: flex; align-items: baseline; gap: 3px;
-}
-.block-from {
-  font-weight: 700; font-size: 13px; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; flex-direction: column; gap: 2px;
 }
 .block-time {
-  color: var(--accent); font-weight: 700; font-size: 12px; white-space: nowrap;
+  font-weight: 800; font-size: 15px; color: var(--text);
+  letter-spacing: -0.3px;
 }
-.block-route-bottom {
+.block-route {
   display: flex; align-items: center; gap: 3px;
+  font-size: 11px; line-height: 1.3;
 }
-.block-arrow { color: var(--text-light); font-size: 10px; flex-shrink: 0; }
+.block-from {
+  font-weight: 600; color: var(--text-light);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.block-arrow { color: var(--border); font-size: 9px; flex-shrink: 0; }
 .block-to {
-  color: var(--primary); font-weight: 700; font-size: 13px;
+  font-weight: 600; color: var(--primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -390,8 +396,9 @@ button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
 .time-colon { font-size: 16px; font-weight: 600; color: var(--text-light); }
 
 @media (max-width: 480px) {
-  .schedule-container { padding: 4px 2px; }
-  .schedule-block { padding: 8px 6px; }
+  .schedule-block { padding: 6px 5px 6px 8px; }
+  .block-time { font-size: 13px; }
+  .block-route { font-size: 10px; }
 }
 </style>
 </head>
@@ -848,7 +855,7 @@ function renderGrid() {
   container.innerHTML = '';
 
   const visibleDays = getVisibleDays();
-  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${visibleDays.length}, minmax(100px, 1fr))`;
 
   const sorted = [...schedules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -953,11 +960,11 @@ function createScheduleBlock(schedule, dayIdx) {
 
   const timeStr = `${String(schedule.hour).padStart(2,'0')}:${String(schedule.min).padStart(2,'0')}`;
 
-  const route = document.createElement('div');
-  route.className = 'block-route';
-  route.innerHTML = `
-    <div class="block-route-top"><span class="block-from">${schedule.from}</span> <span class="block-time">${timeStr}</span></div>
-    <div class="block-route-bottom"><span class="block-arrow">→</span> <span class="block-to">${schedule.to}</span></div>`;
+  const content = document.createElement('div');
+  content.className = 'block-content';
+  content.innerHTML = `
+    <span class="block-time">${timeStr}</span>
+    <div class="block-route"><span class="block-from">${schedule.from}</span> <span class="block-arrow">→</span> <span class="block-to">${schedule.to}</span></div>`;
 
   const profiles = document.createElement('div');
   profiles.className = 'block-profiles';
@@ -985,7 +992,7 @@ function createScheduleBlock(schedule, dayIdx) {
 
   block.appendChild(colorBar);
   block.appendChild(del);
-  block.appendChild(route);
+  block.appendChild(content);
   if (schedule.childIds.length > 0) block.appendChild(profiles);
 
   block.addEventListener('click', () => openScheduleModal(schedule.id));
