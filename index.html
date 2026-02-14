@@ -28,6 +28,9 @@ body {
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
 }
+button, .child-chip, .day-toggle, .add-block-btn, .schedule-block {
+  touch-action: manipulation;
+}
 
 /* Header */
 .app-header {
@@ -478,8 +481,14 @@ function initTimeSelects() {
 }
 
 function saveData() {
-  localStorage.setItem('pickup_children', JSON.stringify(children));
-  localStorage.setItem('pickup_schedules', JSON.stringify(schedules));
+  try {
+    localStorage.setItem('pickup_children', JSON.stringify(children));
+    localStorage.setItem('pickup_schedules', JSON.stringify(schedules));
+  } catch (e) {
+    showToast('저장 공간이 부족합니다. 사진 크기를 줄여주세요.');
+    return false;
+  }
+  return true;
 }
 
 function showToast(msg) {
@@ -536,21 +545,42 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 });
 
 // --- Children ---
+function compressImage(file, maxSize, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        const ratio = Math.min(maxSize / w, maxSize / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
 function previewChildImage(e) {
   const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    childImageData = ev.target.result;
-    document.getElementById('childAvatarPreview').innerHTML = `<img src="${childImageData}" alt=""><div class="camera-icon">✎</div>`;
-  };
-  reader.readAsDataURL(file);
+  compressImage(file, 160, 0.7).then(data => {
+    childImageData = data;
+    document.getElementById('childAvatarPreview').innerHTML = `<img src="${data}" alt=""><div class="camera-icon">✎</div>`;
+  });
 }
 
 function saveChild() {
   const name = document.getElementById('childName').value.trim();
   if (!name) { showToast('이름을 입력해 주세요.'); return; }
-  children.push({ id: 'c_' + Date.now(), name, image: childImageData, color: CHILD_COLORS[children.length % CHILD_COLORS.length] });
-  saveData(); closeChildModal();
+  const newChild = { id: 'c_' + Date.now(), name, image: childImageData, color: CHILD_COLORS[children.length % CHILD_COLORS.length] };
+  children.push(newChild);
+  if (!saveData()) { children.pop(); return; }
+  closeChildModal();
   showToast(`${name} 등록 완료!`); renderGrid();
 }
 
@@ -603,13 +633,16 @@ function saveSchedule() {
 
   if (editingScheduleId) {
     const idx = schedules.findIndex(s => s.id === editingScheduleId);
+    const backup = idx >= 0 ? { ...schedules[idx] } : null;
     if (idx >= 0) schedules[idx] = { ...schedules[idx], from, to, hour, min, childIds: cids, days };
+    if (!saveData()) { if (backup && idx >= 0) schedules[idx] = backup; return; }
     showToast('일정이 수정되었습니다.');
   } else {
     schedules.push({ id: 's_' + Date.now(), from, to, hour, min, childIds: cids, days, order: schedules.length });
+    if (!saveData()) { schedules.pop(); return; }
     showToast('일정이 추가되었습니다.');
   }
-  saveData(); closeScheduleModal(); renderGrid();
+  closeScheduleModal(); renderGrid();
 }
 
 function deleteSchedule(id) {
